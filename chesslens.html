@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChessLens — Game Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=JetBrains+Mono:wght@400;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- Chess.js for move parsing/validation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+  <style>
+    /* ============================================================
+       CSS — CHESSLENS
+    ============================================================ */
+
+    :root {
+      --bg-deep:       #0a0a0a;
+      --bg-card:       #111111;
+      --bg-panel:      #161616;
+      --bg-hover:      #1e1e1e;
+      --border:        #2a2a2a;
+      --border-light:  #333333;
+      --ivory:         #f0ead6;
+      --ivory-dim:     #a89f88;
+      --crimson:       #c0392b;
+      --crimson-glow:  #e74c3c;
+      --gold:          #d4a843;
+      --green-soft:    #2ecc71;
+      --blue-soft:     #3498db;
+      --orange-soft:   #e67e22;
+      --red-soft:      #e74c3c;
+      --purple-soft:   #9b59b6;
+
+      --sq-light:      #f0d9b5;
+      --sq-dark:       #b58863;
+      --sq-highlight:  rgba(255, 255, 0, 0.35);
+      --sq-lastmove:   rgba(20, 85, 30, 0.5);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deep);
+      color: var(--ivory);
+      font-family: 'Crimson Pro', serif;
+      font-size: 16px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-card);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--ivory);
+    }
+
+    .logo span {
+      color: var(--crimson);
+    }
+
+    .logo-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--ivory-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: -4px;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: transparent;
+      border: 1px solid var(--crimson);
+      color: var(--crimson);
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+
+    /* ---- MAIN LAYOUT ---- */
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+
+    /* ---- INPUT SECTION ---- */
+    .input-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 28px;
+      margin-bottom: 28px;
+      animation: fadeSlideIn 0.5s ease both;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--crimson);
+      margin-bottom: 12px;
+    }
+
+    .input-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--ivory);
+    }
+
+    .input-desc {
+      color: var(--ivory-dim);
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-light);
+      border-radius: 3px;
+      color: var(--ivory);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 14px;
+      resize: vertical;
+      min-height: 120px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--crimson);
+    }
+
+    textarea::placeholder {
+      color: #444;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      background: var(--crimson);
+      color: var(--ivory);
+      border: none;
+      padding: 12px 28px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover { background: var(--crimson-glow); }
+    .btn-primary:active { transform: scale(0.97); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--ivory-dim);
+      border: 1px solid var(--border-light);
+      padding: 12px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--ivory-dim);
+      color: var(--ivory);
+    }
+
+    /* ---- ANALYSIS SECTION ---- */
+    #analysis-section {
+      display: none;
+      animation: fadeSlideIn 0.5s ease both;
+    }
+
+    /* ---- ACCURACY BARS ---- */
+    .accuracy-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .accuracy-card {
+      flex: 1;
+      min-width: 160px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .accuracy-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+    }
+
+    .accuracy-card.white::before { background: var(--ivory); }
+    .accuracy-card.black::before { background: #555; }
+
+    .acc-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ivory-dim);
+      margin-bottom: 6px;
+    }
+
+    .acc-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .acc-percent {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .acc-bar-bg {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .acc-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s ease;
+      background: var(--crimson);
+    }
+
+    .acc-breakdown {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .acc-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      padding: 2px 7px;
+      border-radius: 20px;
+      border: 1px solid;
+    }
+
+    /* ---- MAIN REVIEW LAYOUT ---- */
+    .review-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+    }
+
+    @media (max-width: 700px) {
+      .review-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ---- BOARD ---- */
+    .board-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+    }
+
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .player-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    .player-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      border: 1px solid #555;
+    }
+
+    .player-dot.white-dot { background: var(--ivory); }
+    .player-dot.black-dot { background: #222; border-color: #666; }
+
+    #board-container {
+      width: 100%;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border: 2px solid var(--border-light);
+      border-radius: 2px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .sq {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    .sq.light { background: var(--sq-light); }
+    .sq.dark  { background: var(--sq-dark); }
+    .sq.highlight { background: var(--sq-highlight) !important; }
+    .sq.lastmove  { box-shadow: inset 0 0 0 3px rgba(20,85,30,0.7); }
+
+    .piece {
+      font-size: clamp(18px, 5vw, 38px);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .sq-label {
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.5rem;
+      opacity: 0.5;
+      bottom: 1px;
+      right: 2px;
+    }
+
+    .board-nav {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: center;
+    }
+
+    .nav-btn {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-light);
+      color: var(--ivory-dim);
+      width: 36px; height: 36px;
+      border-radius: 2px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-hover);
+      color: var(--ivory);
+    }
+
+    .move-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--ivory-dim);
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+    }
+
+    /* ---- CLASSIFICATION BADGE ---- */
+    .classif-display {
+      margin-top: 12px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .classif-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 2px;
+      border: 1px solid;
+      animation: popIn 0.25s ease;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .classif-move-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--ivory-dim);
+    }
+
+    /* ---- MOVE LIST PANEL ---- */
+    .move-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ivory-dim);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .move-list {
+      overflow-y: auto;
+      flex: 1;
+      max-height: 420px;
+      padding: 8px 0;
+    }
+
+    .move-list::-webkit-scrollbar { width: 4px; }
+    .move-list::-webkit-scrollbar-track { background: transparent; }
+    .move-list::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+
+    .move-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 1fr;
+      gap: 2px;
+      padding: 2px 8px;
+    }
+
+    .move-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: #444;
+      display: flex;
+      align-items: center;
+      padding-top: 1px;
+    }
+
+    .move-btn {
+      background: transparent;
+      border: none;
+      color: var(--ivory);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 5px 8px;
+      border-radius: 2px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .move-btn:hover { background: var(--bg-hover); }
+
+    .move-btn.active {
+      background: var(--crimson);
+      color: var(--ivory);
+    }
+
+    .move-icon {
+      font-size: 0.65rem;
+      width: 14px;
+      text-align: center;
+    }
+
+    /* Classification colors */
+    .cl-brilliant { color: var(--purple-soft); border-color: var(--purple-soft); }
+    .cl-great     { color: var(--blue-soft);   border-color: var(--blue-soft); }
+    .cl-best      { color: var(--green-soft);  border-color: var(--green-soft); }
+    .cl-inaccuracy{ color: var(--gold);        border-color: var(--gold); }
+    .cl-mistake   { color: var(--orange-soft); border-color: var(--orange-soft); }
+    .cl-blunder   { color: var(--red-soft);    border-color: var(--red-soft); }
+
+    .cl-brilliant-bg { background: rgba(155,89,182,0.15); }
+    .cl-great-bg     { background: rgba(52,152,219,0.15); }
+    .cl-best-bg      { background: rgba(46,204,113,0.15); }
+    .cl-inaccuracy-bg{ background: rgba(212,168,67,0.15); }
+    .cl-mistake-bg   { background: rgba(230,126,34,0.15); }
+    .cl-blunder-bg   { background: rgba(231,76,60,0.15); }
+
+    /* ---- PROGRESS / LOADING ---- */
+    .progress-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 28px;
+      text-align: center;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .progress-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar-bg {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--crimson);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .progress-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--ivory-dim);
+    }
+
+    /* ---- ERROR ---- */
+    .error-box {
+      background: rgba(192,57,43,0.1);
+      border: 1px solid var(--crimson);
+      border-radius: 4px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--crimson-glow);
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    /* ---- LEGEND ---- */
+    .legend {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px 20px;
+      margin-top: 20px;
+    }
+
+    .legend-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ivory-dim);
+      margin-bottom: 12px;
+    }
+
+    .legend-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+    }
+
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ---- FOOTER ---- */
+    footer {
+      text-align: center;
+      padding: 28px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: #333;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div>
+      <div class="logo">Chess<span>Lens</span></div>
+      <div class="logo-sub">Game Review Engine</div>
+    </div>
+    <div class="badge">Free · No Login</div>
+  </header>
+
+  <main class="app">
+
+    <!-- PGN INPUT -->
+    <div class="input-section" id="input-section">
+      <div class="section-label">Step 01</div>
+      <div class="input-title">Paste Your Game</div>
+      <div class="input-desc">Enter a PGN (Portable Game Notation) from any chess game. You can export PGN from Lichess, Chess.com, or any chess app.</div>
+
+      <textarea id="pgn-input" rows="6" placeholder='[Event "Casual Game"]&#10;[White "Player1"]&#10;[Black "Player2"]&#10;&#10;1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 ...'></textarea>
+
+      <div class="btn-row">
+        <button class="btn-primary" onclick="startAnalysis()">Analyze Game</button>
+        <button class="btn-secondary" onclick="loadSample()">Load Sample Game</button>
+        <button class="btn-secondary" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-box" id="error-box"></div>
+
+    <!-- PROGRESS -->
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-title">Analyzing Positions…</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-status" id="progress-status">Loading engine…</div>
+    </div>
+
+    <!-- ANALYSIS RESULTS -->
+    <div id="analysis-section">
+
+      <!-- ACCURACY CARDS -->
+      <div class="accuracy-row" id="accuracy-row"></div>
+
+      <!-- BOARD + MOVE LIST -->
+      <div class="review-layout">
+
+        <!-- LEFT: BOARD -->
+        <div class="board-wrap">
+          <div class="board-header">
+            <div class="player-tag" id="black-tag">
+              <div class="player-dot black-dot"></div>
+              <span id="black-name">Black</span>
+            </div>
+          </div>
+
+          <div id="board-container"></div>
+
+          <div class="board-header" style="margin-top:14px; margin-bottom:0;">
+            <div class="player-tag" id="white-tag">
+              <div class="player-dot white-dot"></div>
+              <span id="white-name">White</span>
+            </div>
+          </div>
+
+          <!-- CLASSIFICATION BADGE -->
+          <div class="classif-display" id="classif-display"></div>
+
+          <!-- NAVIGATION -->
+          <div class="board-nav">
+            <button class="nav-btn" onclick="goToMove(0)" title="Start">⏮</button>
+            <button class="nav-btn" onclick="prevMove()" title="Previous">◀</button>
+            <div class="move-counter" id="move-counter">0 / 0</div>
+            <button class="nav-btn" onclick="nextMove()" title="Next">▶</button>
+            <button class="nav-btn" onclick="goToMove(appState.moves.length)" title="End">⏭</button>
+          </div>
+        </div>
+
+        <!-- RIGHT: MOVE LIST -->
+        <div class="move-panel">
+          <div class="panel-title">Move List</div>
+          <div class="move-list" id="move-list"></div>
+        </div>
+
+      </div>
+
+      <!-- LEGEND -->
+      <div class="legend">
+        <div class="legend-title">Classification Guide</div>
+        <div class="legend-grid">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--purple-soft)"></div><span class="cl-brilliant">✦ Brilliant</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--blue-soft)"></div><span class="cl-great">! Great</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-soft)"></div><span class="cl-best">✓ Best</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div><span class="cl-inaccuracy">?! Inaccuracy</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--orange-soft)"></div><span class="cl-mistake">? Mistake</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red-soft)"></div><span class="cl-blunder">?? Blunder</span></div>
+        </div>
+      </div>
+
+      <!-- NEW ANALYSIS BUTTON -->
+      <div style="margin-top: 20px; text-align:center;">
+        <button class="btn-secondary" onclick="resetApp()">← Analyze Another Game</button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>ChessLens · Powered by Stockfish · Runs entirely in your browser · No data leaves your device</footer>
+
+  <script src="chesslens.js"></script>
+</body>
+</html>
