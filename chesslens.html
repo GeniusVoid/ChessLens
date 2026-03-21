@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChessLens - Game Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <style>
+    :root {
+      --green:       #81b64c;
+      --green-dark:  #4a7c2f;
+      --green-dim:   #2d5016;
+      --bg:          #1a1a1a;
+      --bg2:         #262421;
+      --bg3:         #302e2b;
+      --bg4:         #3d3a36;
+      --bgh:         #454240;
+      --bgi:         #1e1e1e;
+      --t1:          #e8e6e3;
+      --t2:          #b0ada8;
+      --t3:          #706c67;
+      --br:          #454240;
+      --br2:         #555250;
+      --sq-l:        #f0d9b5;
+      --sq-d:        #b58863;
+      --sq-ll:       #cdd16f;
+      --sq-ld:       #aaa23a;
+      --brilliant:   #1baca6;
+      --great:       #5c8bb0;
+      --best:        #81b64c;
+      --inaccuracy:  #f4d03f;
+      --mistake:     #e08c13;
+      --blunder:     #ca3431;
+      --r:           8px;
+      --r2:          5px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--t1);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ---- HEADER ---- */
+    .hdr {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--br);
+      height: 52px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 200;
+    }
+
+    .logo { display:flex; align-items:center; gap:10px; }
+
+    .logo-box {
+      width:34px; height:34px; background:var(--green);
+      border-radius:6px; display:flex; align-items:center; justify-content:center;
+    }
+
+    .logo-box img { width:22px; height:22px; }
+
+    .logo-txt { font-size:1.2rem; font-weight:800; letter-spacing:-0.02em; }
+    .logo-txt span { color:var(--green); }
+
+    .badge {
+      background:var(--green-dim); color:var(--green);
+      border:1px solid var(--green-dark);
+      border-radius:20px; padding:4px 12px;
+      font-size:0.72rem; font-weight:700;
+    }
+
+    /* ---- SHELL ---- */
+    .shell { max-width:1080px; margin:0 auto; padding:24px 16px 48px; }
+
+    /* ---- SCREENS ---- */
+    #s-input   { display:block; }
+    #s-loading { display:none;  }
+    #s-review  { display:none;  }
+
+    /* ---- INPUT ---- */
+    .input-card {
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); padding:32px;
+      max-width:640px; margin:40px auto 0;
+    }
+
+    .input-card h1 { font-size:1.5rem; font-weight:800; margin-bottom:6px; }
+    .input-card p  { color:var(--t2); font-size:0.9rem; margin-bottom:20px; line-height:1.6; }
+
+    textarea {
+      width:100%; background:var(--bgi);
+      border:1.5px solid var(--br); border-radius:var(--r2);
+      color:var(--t1); font-family:'Courier New',monospace;
+      font-size:0.78rem; padding:14px; resize:vertical;
+      min-height:140px; outline:none; transition:border-color 0.2s; line-height:1.6;
+    }
+    textarea:focus { border-color:var(--green); }
+    textarea::placeholder { color:var(--t3); }
+
+    .btn-row { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+    .btn-g {
+      background:var(--green); color:#fff; border:none;
+      padding:11px 24px; border-radius:var(--r2);
+      font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:800;
+      cursor:pointer; transition:background 0.15s, transform 0.1s;
+    }
+    .btn-g:hover { background:var(--green-dark); }
+    .btn-g:active { transform:scale(0.97); }
+
+    .btn-o {
+      background:transparent; color:var(--t2);
+      border:1.5px solid var(--br2); padding:10px 18px;
+      border-radius:var(--r2); font-family:'Nunito',sans-serif;
+      font-size:0.85rem; font-weight:700; cursor:pointer;
+      transition:border-color 0.15s, color 0.15s;
+    }
+    .btn-o:hover { border-color:var(--t2); color:var(--t1); }
+
+    .err-box {
+      background:rgba(202,52,49,0.1); border:1px solid rgba(202,52,49,0.45);
+      border-radius:var(--r2); color:#e57373;
+      font-size:0.82rem; font-weight:700;
+      padding:12px 16px; margin-top:14px; display:none;
+    }
+
+    /* ---- LOADING ---- */
+    .load-card {
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); padding:48px 32px;
+      max-width:440px; margin:60px auto 0; text-align:center;
+    }
+
+    .spin-icon {
+      width:48px; height:48px; margin:0 auto 16px;
+      animation:spin 1.6s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .load-card h2 { font-size:1.1rem; font-weight:800; margin-bottom:20px; }
+
+    .prog-track { background:var(--bgi); height:6px; border-radius:3px; overflow:hidden; margin-bottom:10px; }
+    .prog-fill  { height:100%; background:var(--green); border-radius:3px; transition:width 0.3s ease; width:0%; }
+    .prog-lbl   { font-size:0.78rem; color:var(--t3); font-weight:600; }
+
+    /* ---- ACCURACY CARDS ---- */
+    .acc-row { display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+
+    .acc-card {
+      flex:1; min-width:200px;
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); padding:16px 20px;
+      display:flex; align-items:center; gap:14px;
+    }
+
+    .acc-av {
+      width:44px; height:44px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .acc-av.w { background:#e8e6e3; }
+    .acc-av.b { background:#3a3a3a; border:2px solid #666; }
+
+    .acc-info { flex:1; min-width:0; }
+    .acc-pname { font-size:0.88rem; font-weight:800; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .acc-pct   { font-size:1.7rem; font-weight:900; line-height:1; margin-bottom:6px; }
+
+    .acc-bar-track { height:5px; background:var(--bgi); border-radius:3px; overflow:hidden; margin-bottom:8px; }
+    .acc-bar-fill  { height:100%; border-radius:3px; transition:width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+    .acc-pills { display:flex; gap:5px; flex-wrap:wrap; }
+
+    .pill {
+      font-size:0.63rem; font-weight:800;
+      padding:2px 8px; border-radius:20px; border:1.5px solid;
+    }
+
+    /* ---- REVIEW GRID ---- */
+    .review-grid {
+      display:grid; grid-template-columns:1fr 260px; gap:14px; align-items:start;
+    }
+    @media(max-width:680px) { .review-grid { grid-template-columns:1fr; } }
+
+    /* ---- BOARD PANEL ---- */
+    .board-panel {
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); padding:16px;
+    }
+
+    .player-row { display:flex; align-items:center; gap:10px; padding:8px 0; }
+
+    .p-av {
+      width:32px; height:32px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .p-av.w { background:#e8e6e3; }
+    .p-av.b { background:#3a3a3a; border:1.5px solid #666; }
+    .p-av img { width:20px; height:20px; }
+
+    .p-name { font-size:0.85rem; font-weight:800; }
+
+    /* ---- CHESSBOARD ---- */
+    #board {
+      width:100%; aspect-ratio:1;
+      display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(8,1fr);
+      border-radius:4px; overflow:hidden; border:2px solid var(--br); user-select:none;
+    }
+
+    .sq {
+      position:relative; display:flex; align-items:center; justify-content:center;
+    }
+    .sq.light      { background:var(--sq-l);  }
+    .sq.dark       { background:var(--sq-d);  }
+    .sq.last-light { background:var(--sq-ll); }
+    .sq.last-dark  { background:var(--sq-ld); }
+
+    .sq-coord {
+      position:absolute; font-size:clamp(7px,1.1vw,9px);
+      font-weight:800; line-height:1; pointer-events:none;
+    }
+    .sq-coord.rl { top:2px; left:3px; }
+    .sq-coord.fl { bottom:2px; right:3px; }
+    .sq.light .sq-coord, .sq.last-light .sq-coord { color:var(--sq-d); }
+    .sq.dark  .sq-coord, .sq.last-dark  .sq-coord { color:var(--sq-l); }
+
+    /* PIECE IMAGE — fills square properly */
+    .piece-img {
+      width:88%; height:88%;
+      object-fit:contain; pointer-events:none;
+      display:block;
+    }
+
+    /* ---- BOARD NAV ---- */
+    .board-nav {
+      display:flex; align-items:center; gap:8px; padding-top:12px; justify-content:center;
+    }
+
+    .nav-btn {
+      background:var(--bg4); border:1px solid var(--br); color:var(--t2);
+      width:34px; height:34px; border-radius:var(--r2);
+      font-size:0.85rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover  { background:var(--bgh); color:var(--t1); }
+    .nav-btn:active { transform:scale(0.94); }
+
+    .mv-ctr { font-size:0.75rem; font-weight:700; color:var(--t3); min-width:54px; text-align:center; }
+
+    /* ---- CLASSIFICATION CHIP ---- */
+    .cl-chip { margin-top:12px; min-height:32px; display:flex; align-items:center; gap:8px; }
+
+    .chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:5px 14px; border-radius:20px; font-size:0.78rem; font-weight:800;
+      border:1.5px solid; animation:chipIn 0.2s ease;
+    }
+    @keyframes chipIn {
+      from { opacity:0; transform:scale(0.82) translateY(4px); }
+      to   { opacity:1; transform:scale(1) translateY(0); }
+    }
+    .chip-mv { font-size:0.82rem; font-weight:700; color:var(--t2); }
+
+    /* ---- MOVES PANEL ---- */
+    .moves-panel {
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); overflow:hidden;
+    }
+
+    .panel-hdr {
+      padding:12px 16px; border-bottom:1px solid var(--br);
+      font-size:0.72rem; font-weight:800;
+      text-transform:uppercase; letter-spacing:0.07em; color:var(--t2);
+    }
+
+    .moves-list { overflow-y:auto; max-height:440px; padding:6px 0; }
+    .moves-list::-webkit-scrollbar { width:4px; }
+    .moves-list::-webkit-scrollbar-track { background:transparent; }
+    .moves-list::-webkit-scrollbar-thumb { background:var(--br2); border-radius:2px; }
+
+    .mv-row { display:grid; grid-template-columns:28px 1fr 1fr; gap:2px; padding:1px 8px; }
+
+    .mv-num { display:flex; align-items:center; font-size:0.7rem; color:var(--t3); font-weight:600; padding-left:2px; }
+
+    .mv-btn {
+      background:transparent; border:none; color:var(--t1);
+      font-family:'Nunito',sans-serif; font-size:0.82rem; font-weight:700;
+      padding:6px 8px; border-radius:var(--r2);
+      cursor:pointer; text-align:left;
+      display:flex; align-items:center; gap:5px; transition:background 0.1s;
+    }
+    .mv-btn:hover  { background:var(--bgh); }
+    .mv-btn.active { background:var(--green); color:#fff; }
+    .mv-btn.active .mv-icon { color:#fff !important; }
+
+    .mv-icon { font-size:0.68rem; font-weight:900; width:16px; text-align:center; flex-shrink:0; }
+
+    /* ---- LEGEND ---- */
+    .legend {
+      background:var(--bg3); border:1px solid var(--br);
+      border-radius:var(--r); padding:14px 16px; margin-top:14px;
+    }
+
+    .leg-title {
+      font-size:0.72rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:0.07em; color:var(--t2); margin-bottom:10px;
+    }
+
+    .leg-items { display:flex; flex-wrap:wrap; gap:10px; }
+    .leg-item  { display:flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:700; }
+    .leg-dot   { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+    .new-game { margin-top:16px; text-align:center; }
+
+    /* ---- CLASSIFICATION COLORS ---- */
+    .c-brilliant  { color:var(--brilliant);  border-color:var(--brilliant); }
+    .c-great      { color:var(--great);      border-color:var(--great); }
+    .c-best       { color:var(--best);       border-color:var(--best); }
+    .c-inaccuracy { color:var(--inaccuracy); border-color:var(--inaccuracy); }
+    .c-mistake    { color:var(--mistake);    border-color:var(--mistake); }
+    .c-blunder    { color:var(--blunder);    border-color:var(--blunder); }
+
+    .bg-brilliant  { background:rgba(27,172,166,0.13); }
+    .bg-great      { background:rgba(92,139,176,0.13); }
+    .bg-best       { background:rgba(129,182,76,0.13); }
+    .bg-inaccuracy { background:rgba(244,208,63,0.13); }
+    .bg-mistake    { background:rgba(224,140,19,0.13); }
+    .bg-blunder    { background:rgba(202,52,49,0.13); }
+
+    footer {
+      text-align:center; padding:24px;
+      font-size:0.72rem; color:var(--t3); font-weight:600;
+      border-top:1px solid var(--br); margin-top:40px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">
+    <div class="logo-box">
+      <img src="https://lichess1.org/assets/piece/cburnett/wN.svg" alt="chess">
+    </div>
+    <span class="logo-txt">Chess<span>Lens</span></span>
+  </div>
+  <div class="badge">Free &middot; No Login</div>
+</header>
+
+<div class="shell">
+
+  <!-- INPUT SCREEN -->
+  <div id="s-input">
+    <div class="input-card">
+      <h1>Analyze Your Game</h1>
+      <p>Paste a PGN from Lichess, Chess.com, or any chess app to get move-by-move analysis with accuracy scores and move classifications.</p>
+      <textarea id="pgn-input" placeholder="Paste your PGN here..."></textarea>
+      <div id="err-box" class="err-box"></div>
+      <div class="btn-row">
+        <button class="btn-g" onclick="startAnalysis()">Analyze Game</button>
+        <button class="btn-o" onclick="loadSample()">Load Sample</button>
+        <button class="btn-o" onclick="document.getElementById('pgn-input').value=''">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING SCREEN -->
+  <div id="s-loading">
+    <div class="load-card">
+      <img class="spin-icon" src="https://lichess1.org/assets/piece/cburnett/wQ.svg" alt="analyzing">
+      <h2>Analyzing Positions...</h2>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-lbl" id="prog-lbl">Loading...</div>
+    </div>
+  </div>
+
+  <!-- REVIEW SCREEN -->
+  <div id="s-review">
+
+    <!-- ACCURACY CARDS -->
+    <div class="acc-row" id="acc-row"></div>
+
+    <div class="review-grid">
+
+      <!-- BOARD PANEL -->
+      <div class="board-panel">
+
+        <div class="player-row">
+          <div class="p-av b">
+            <img id="black-av" src="https://lichess1.org/assets/piece/cburnett/bP.svg" alt="black">
+          </div>
+          <div class="p-name" id="black-lbl">Black</div>
+        </div>
+
+        <div id="board"></div>
+
+        <div class="player-row">
+          <div class="p-av w">
+            <img id="white-av" src="https://lichess1.org/assets/piece/cburnett/wP.svg" alt="white">
+          </div>
+          <div class="p-name" id="white-lbl">White</div>
+        </div>
+
+        <div class="cl-chip" id="cl-chip">
+          <span style="font-size:0.75rem;color:var(--t3);font-weight:600">Starting position</span>
+        </div>
+
+        <div class="board-nav">
+          <button class="nav-btn" onclick="goTo(0)">&#9198;</button>
+          <button class="nav-btn" onclick="prev()">&#9664;</button>
+          <div class="mv-ctr" id="mv-ctr">0 / 0</div>
+          <button class="nav-btn" onclick="next()">&#9654;</button>
+          <button class="nav-btn" onclick="goTo(appState.moves.length)">&#9197;</button>
+        </div>
+      </div>
+
+      <!-- MOVES PANEL -->
+      <div class="moves-panel">
+        <div class="panel-hdr">Moves</div>
+        <div class="moves-list" id="moves-list"></div>
+      </div>
+
+    </div>
+
+    <!-- LEGEND -->
+    <div class="legend">
+      <div class="leg-title">Move Classifications</div>
+      <div class="leg-items">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--brilliant)"></div><span class="c-brilliant">!! Brilliant</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--great)"></div><span class="c-great">! Great</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--best)"></div><span class="c-best">&#10003; Best</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--inaccuracy)"></div><span class="c-inaccuracy">?! Inaccuracy</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--mistake)"></div><span class="c-mistake">? Mistake</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--blunder)"></div><span class="c-blunder">?? Blunder</span></div>
+      </div>
+    </div>
+
+    <div class="new-game">
+      <button class="btn-o" onclick="resetApp()">&larr; Analyze Another Game</button>
+    </div>
+
+  </div>
+
+</div>
+
+<footer>ChessLens &middot; Runs entirely in your browser &middot; No data leaves your device &middot; Free forever</footer>
+
+<script src="chesslens.js"></script>
+</body>
+</html>
